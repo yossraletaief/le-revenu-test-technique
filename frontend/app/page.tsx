@@ -1,68 +1,61 @@
-import Image from "next/image";
+import { notFound } from 'next/navigation';
+import { CategoryChips, CategoryNav } from '@/components/layout/CategoryNav';
+import { DiscussionList } from '@/components/discussions/DiscussionList';
+import { SortTabs } from '@/components/discussions/SortTabs';
+import { Pagination } from '@/components/ui/Pagination';
+import { pluralize } from '@/lib/format';
+import { homeHref, parseHomeSearchParams } from '@/lib/search-params';
+import { getCategories } from '@/lib/strapi/categories';
+import { getDiscussions } from '@/lib/strapi/discussions';
 
-export default function Home() {
+const PAGE_SIZE = 10;
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/** Server Component: data fetched on the server, filters/sort/page read from the URL. */
+export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
+  const state = parseHomeSearchParams(await searchParams);
+
+  // Both requests run in parallel.
+  const [categories, list] = await Promise.all([
+    getCategories(),
+    getDiscussions({ ...state, pageSize: PAGE_SIZE }),
+  ]);
+
+  const active = state.category ? categories.find((c) => c.slug === state.category) : undefined;
+  if (state.category && !active) notFound(); // unknown category slug → real 404
+  const { page, pageCount, total } = list.meta.pagination;
+  if (total > 0 && page > pageCount) notFound(); // page out of range
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div className="grid grid-cols-1 items-start gap-7 pt-4 pb-24 md:grid-cols-[200px_minmax(0,1fr)] md:pt-6 lg:grid-cols-[212px_minmax(0,1fr)]">
+      <CategoryNav categories={categories} active={state.category} sort={state.sort} />
+
+      <main className="flex min-w-0 flex-col gap-[18px]">
+        {active ? (
+          <section className="rounded-card border border-hairline bg-surface p-[22px] shadow-card">
+            <h1 className="font-display text-[28px] font-bold tracking-tight">{active.name}</h1>
+            {active.description && <p className="mt-1 max-w-[60ch] text-ink-2">{active.description}</p>}
+            <p className="mt-2 text-[13px] text-ink-3">{pluralize(total, 'discussion', 'discussions')}</p>
+          </section>
+        ) : (
+          <section className="relative overflow-hidden rounded-[18px] bg-[radial-gradient(120%_140%_at_100%_0%,color-mix(in_srgb,var(--brand)_55%,transparent)_0%,transparent_55%),linear-gradient(160deg,var(--hero-top),var(--hero))] px-5 py-[22px] text-white shadow-card-lg md:px-7 md:pt-7 md:pb-6">
+            <h1 className="max-w-[22ch] font-display text-[25px] leading-tight font-bold tracking-tight md:text-[32px]">
+              La communauté des lecteurs du Revenu
+            </h1>
+            <p className="mt-2 max-w-[52ch] text-white/80">
+              Posez vos questions d&apos;argent, partagez vos expériences et échangez avec la rédaction.
+            </p>
+            <p className="mt-4 text-[13px] text-white/90">
+              <b className="block text-xl font-bold tabular-nums">{total}</b>discussions
+            </p>
+          </section>
+        )}
+
+        <CategoryChips categories={categories} active={state.category} sort={state.sort} />
+        <SortTabs sort={state.sort} category={state.category} />
+        <DiscussionList discussions={list.data} />
+        <Pagination page={page} pageCount={pageCount} href={(p) => homeHref({ ...state, page: p })} />
       </main>
     </div>
   );

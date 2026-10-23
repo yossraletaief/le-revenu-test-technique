@@ -1,6 +1,6 @@
 import { factories } from '@strapi/strapi';
 import { excerpt, type ListQuery } from '../utils/list-query';
-
+import { toDiscussionDetail, type DiscussionDetail, type RawDiscussionRow } from '../utils/detail';
 export interface DiscussionListItem {
   documentId: string;
   title: string;
@@ -56,5 +56,30 @@ export default factories.createCoreService('api::discussion.discussion', ({ stra
     }));
 
     return { data, meta: { pagination: { page, pageSize, pageCount: Math.ceil(total / pageSize), total } } };
+  },
+
+
+    /**
+   * One discussion with its category, author and replies (oldest first), in a single Document Service call.
+   * `where` is either a slug (public URL) or a documentId (core findOne route).
+   */
+  async findDetail(where: { slug: string } | { documentId: string }): Promise<DiscussionDetail | null> {
+    const filters = 'slug' in where ? { slug: { $eq: where.slug } } : { documentId: { $eq: where.documentId } };
+
+    const row = await strapi.documents('api::discussion.discussion').findFirst({
+      filters,
+      fields: ['title', 'slug', 'type', 'content', 'createdAt'],
+      populate: {
+        author: { fields: ['username'] },
+        category: { fields: ['name', 'slug', 'description'] },
+        replies: {
+          fields: ['content', 'createdAt'],
+          sort: { createdAt: 'asc' },
+          populate: { author: { fields: ['username'] } },
+        },
+      },
+    });
+
+    return row ? toDiscussionDetail(row as unknown as RawDiscussionRow) : null;
   },
 }));

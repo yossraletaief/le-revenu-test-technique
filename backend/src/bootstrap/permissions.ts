@@ -1,12 +1,15 @@
 import type { Core } from '@strapi/strapi';
 
+/**
+ * Replies are NOT readable on their own (/api/replies): they are only served inside a discussion
+ * through findBySlug/findOne, which return the author's username and nothing else.
+ */
 const READ = [
   'api::category.category.find',
   'api::category.category.findOne',
   'api::discussion.discussion.find',
   'api::discussion.discussion.findOne',
-  'api::reply.reply.find',
-  'api::reply.reply.findOne',
+  'api::discussion.discussion.findBySlug',
 ];
 
 const ROLES: Record<'public' | 'authenticated', string[]> = {

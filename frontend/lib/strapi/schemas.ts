@@ -41,3 +41,31 @@ export type DiscussionType = z.infer<typeof discussionTypeSchema>;
 export type DiscussionListItem = z.infer<typeof discussionListItemSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type DiscussionListResponse = z.infer<typeof discussionListResponseSchema>;
+
+export const publicAuthorSchema = z.object({ username: z.string() }).nullable();
+
+export const replySchema = z.object({
+  documentId: z.string(),
+  content: z.string(),
+  createdAt: z.string(),
+  author: publicAuthorSchema,
+});
+
+export const discussionDetailSchema = z.object({
+  documentId: z.string(),
+  title: z.string(),
+  slug: z.string(),
+  type: discussionTypeSchema,
+  content: z.string(),
+  createdAt: z.string(),
+  lastActivityAt: z.string(),
+  author: publicAuthorSchema,
+  category: z.object({ name: z.string(), slug: z.string(), description: z.string().nullable() }).nullable(),
+  replyCount: z.number().int().nonnegative(),
+  replies: z.array(replySchema),
+});
+
+export const discussionDetailResponseSchema = z.object({ data: discussionDetailSchema });
+
+export type Reply = z.infer<typeof replySchema>;
+export type DiscussionDetail = z.infer<typeof discussionDetailSchema>;

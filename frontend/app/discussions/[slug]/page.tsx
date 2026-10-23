@@ -8,7 +8,9 @@ import { ReplyList } from '@/components/discussions/ReplyList';
 import { homeHref } from '@/lib/search-params';
 import { getCategories } from '@/lib/strapi/categories';
 import { getDiscussionBySlug } from '@/lib/strapi/discussions';
-
+import { ReplyForm } from '@/components/discussions/ReplyForm';
+import { getCurrentUser } from '@/lib/auth/session';
+import { postReply } from './actions';
 type Params = Promise<{ slug: string }>;
 
 /** Same fetch as the page: Next memoizes identical fetches within one render, so Strapi is called once. */
@@ -20,7 +22,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function DiscussionPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const [discussion, categories] = await Promise.all([getDiscussionBySlug(slug), getCategories()]);
+  const [discussion, categories, user] = await Promise.all([getDiscussionBySlug(slug), getCategories(), getCurrentUser()]);;
   if (!discussion) notFound();
 
   return (
@@ -41,11 +43,17 @@ export default async function DiscussionPage({ params }: { params: Params }) {
         <DiscussionArticle discussion={discussion} />
         <ReplyList replies={discussion.replies} />
 
-        {/* Replaced by the reply form in feat/permissions-auth. */}
-        <div className="rounded-card border border-hairline bg-surface px-5 py-[26px] text-center shadow-card">
-          <h3 className="font-display text-[19px] tracking-tight">Vous avez un avis ou une expérience à partager ?</h3>
-          <p className="mt-1.5 text-ink-3">La connexion pour répondre arrive dans la prochaine étape.</p>
-        </div>
+        {user ? (
+          <ReplyForm action={postReply.bind(null, discussion.documentId)} username={user.username} />
+        ) : (
+          <div className="flex flex-col items-center gap-2.5 rounded-card border border-hairline bg-surface px-5 py-[26px] text-center shadow-card">
+            <h3 className="font-display text-[19px] tracking-tight">Vous avez un avis ou une expérience à partager ?</h3>
+            <p className="text-ink-3">Connectez-vous pour répondre.</p>
+            <Link href={`/connexion?next=${encodeURIComponent(`/discussions/${discussion.slug}`)}`} className="inline-flex min-h-11 items-center rounded-[10px] bg-brand px-4 font-semibold text-brand-ink hover:brightness-95">
+              Se connecter pour répondre
+            </Link>
+          </div>
+        )}
       </main>
 
       <div className="md:col-start-2 xl:col-start-auto">

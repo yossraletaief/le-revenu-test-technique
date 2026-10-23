@@ -69,3 +69,13 @@ export const discussionDetailResponseSchema = z.object({ data: discussionDetailS
 
 export type Reply = z.infer<typeof replySchema>;
 export type DiscussionDetail = z.infer<typeof discussionDetailSchema>;
+
+/** /api/users/me returns the email too: zod keeps only what we declare, so it never goes further. */
+export const meSchema = z.object({ username: z.string() });
+export const authResponseSchema = z.object({ jwt: z.string(), user: meSchema });
+
+export const replyCreatedResponseSchema = z.object({
+  data: replySchema.extend({ discussion: z.object({ documentId: z.string(), slug: z.string() }) }),
+});
+
+export type SessionUser = z.infer<typeof meSchema>;

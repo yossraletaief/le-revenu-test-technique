@@ -14,7 +14,7 @@ const READ = [
 
 const ROLES: Record<'public' | 'authenticated', string[]> = {
   public: READ,
-  authenticated: [...READ, 'api::reply.reply.create'],
+  authenticated: [...READ, 'api::discussion.discussion.create', 'api::reply.reply.create'],
 };
 
 /**
